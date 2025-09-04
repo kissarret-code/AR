@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Képfelismerős Mobilapp</title>
+    <title>AR Képfelismerő App</title>
     <style>
         * {
             margin: 0;
@@ -49,18 +49,15 @@
             background: #000;
         }
         
-        #camera-preview {
+        #video-element {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            background: linear-gradient(45deg, #2c3e50, #4a4a8a);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-size: 1.2rem;
-            text-align: center;
-            padding: 20px;
+            transform: scaleX(-1); /* Tükrözés a front camera miatt */
+        }
+        
+        #canvas-element {
+            display: none;
         }
         
         .overlay-image {
@@ -74,9 +71,16 @@
             object-fit: contain;
             display: none;
             z-index: 10;
-            border: 3px solid white;
+            border: 2px solid white;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.05); }
+            100% { transform: translate(-50%, -50%) scale(1); }
         }
         
         .controls {
@@ -111,12 +115,16 @@
             color: white;
             font-size: 1.1rem;
             cursor: pointer;
-            transition: background 0.3s;
-            margin: 5px 0;
+            transition: background 0.3s, transform 0.2s;
         }
         
         button:hover {
             background: #6e8efb;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
         }
         
         .status {
@@ -130,11 +138,23 @@
         .detected {
             background: #d4edda;
             color: #155724;
+            animation: statusPulse 1.5s infinite;
         }
         
         .searching {
             background: #fff3cd;
             color: #856404;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        @keyframes statusPulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
         }
         
         .info {
@@ -145,12 +165,24 @@
             margin-top: 20px;
         }
         
-        .instructions {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
+        .info ul {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+        
+        .info li {
+            margin-bottom: 8px;
+        }
+        
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .button-row button {
+            flex: 1;
+            min-width: 120px;
         }
         
         @media (max-width: 600px) {
@@ -165,105 +197,194 @@
             .camera-container {
                 height: 250px;
             }
+            
+            .button-row {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Képfelismerős Mobilapp</h1>
+    <h1>AR Képfelismerő Mobilalkalmazás</h1>
     
     <div class="container">
-        <div class="instructions">
-            <p>Ez egy szimulált képfelismerős alkalmazás. A valós implementációhoz kamera-hozzáférés és képfeldolgozó algoritmusok szükségesek.</p>
-        </div>
-        
         <div class="camera-container">
-            <div id="camera-preview">
-                Kamera előnézet szimuláció<br>(A valós alkalmazás itt a valós kamera képe jelenne meg)
-            </div>
-            <img id="overlay" class="overlay-image" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiM0YTRhOGEiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSI+JmFjdXRlOHRldHN6Jm9hY3V0ZTtLJmVhY3V0ZTtwPC90ZXh0Pjwvc3ZnPg==" alt="Áttetsző kép">
+            <video id="video-element" autoplay playsinline></video>
+            <canvas id="canvas-element"></canvas>
+            <img id="overlay" class="overlay-image" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzRlNGE4YSIgcng9IjEwIiByeT0iMTAiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSI+QVIgS0VQPC90ZXh0Pgo8L3N2Zz4=" alt="AR kép">
         </div>
         
         <div id="status" class="status searching">Keresés a célkép után...</div>
         
         <div class="target-image">
             <h3>Felismerendő kép</h3>
-            <img id="target-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMjAwIDE1MCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiM2ZThlZmIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSI+Q8OpbCBrJmVhY3V0ZTtwPC90ZXh0Pjwvc3ZnPg==" alt="Célkép">
+            <img id="target-img" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2E3NzdlMyIgcng9IjUiIHJ5PSI1Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiPkNFTEtFUDwvdGV4dD4KPC9zdmc+" alt="Célkép">
         </div>
         
         <div class="controls">
-            <button id="start-btn">Kamera indítása (Szimulált)</button>
-            <button id="simulate-btn">Szimulált felismerés</button>
-            <button id="reset-btn">Visszaállítás</button>
+            <div class="button-row">
+                <button id="start-btn">Kamera indítása</button>
+                <button id="switch-camera-btn">Kamera váltása</button>
+                <button id="capture-btn">Kép rögzítése</button>
+            </div>
+            <div class="button-row">
+                <button id="simulate-btn">Szimulált felismerés</button>
+                <button id="reset-btn">Visszaállítás</button>
+            </div>
         </div>
         
         <div class="info">
-            <p>A valós implementációhoz szükséges lenne:</p>
+            <p>Ez egy működő demonstráció, amely a kamerához való hozzáférés megvalósítását mutatja be. A valós képfelismeréshez további fejlesztésre lenne szükség:</p>
             <ul>
-                <li>Valós kamerahasználat (getUserMedia API)</li>
-                <li>Képfelismerő algoritmus (pl. TensorFlow.js, OpenCV)</li>
+                <li>Valós képfelismerő algoritmus (pl. TensorFlow.js, OpenCV)</li>
                 <li>AR (kiterjesztett valóság) technológia (pl. ARCore, ARKit)</li>
+                <li>Háttérrendszer a képek összehasonlításához</li>
             </ul>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const cameraPreview = document.getElementById('camera-preview');
+            const videoElement = document.getElementById('video-element');
+            const canvasElement = document.getElementById('canvas-element');
             const overlayImage = document.getElementById('overlay');
             const statusDiv = document.getElementById('status');
             const startBtn = document.getElementById('start-btn');
+            const switchCameraBtn = document.getElementById('switch-camera-btn');
             const simulateBtn = document.getElementById('simulate-btn');
             const resetBtn = document.getElementById('reset-btn');
+            const captureBtn = document.getElementById('capture-btn');
             const targetImg = document.getElementById('target-img');
             
-            // Kamera indítása gomb
-            startBtn.addEventListener('click', function() {
+            let stream = null;
+            let useFrontCamera = true;
+            let recognitionInterval = null;
+            let isRecognizing = false;
+            
+            // Kamera indítása
+            async function startCamera() {
                 statusDiv.textContent = "Kamera indítása...";
                 statusDiv.className = "status searching";
                 
-                // Kamera szimuláció
-                setTimeout(() => {
-                    cameraPreview.innerHTML = "Kamera aktív<br>(A valós alkalmazásban itt a valós kamera képe látható)";
-                    cameraPreview.style.background = "linear-gradient(45deg, #1a2a6c, #b21f1f, #fdbb2d)";
+                try {
+                    // Meglévő stream leállítása
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    // Kamera kiválasztása
+                    const constraints = {
+                        video: {
+                            facingMode: useFrontCamera ? "user" : "environment",
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        }
+                    };
+                    
+                    stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    videoElement.srcObject = stream;
+                    
                     statusDiv.textContent = "Kamera elérve. Keresés a célkép után...";
-                    simulateBtn.disabled = false;
-                }, 1500);
+                    
+                    // Szimulált képfelismerés indítása
+                    startRecognitionSimulation();
+                    
+                } catch (error) {
+                    console.error("Hiba a kamera indításakor:", error);
+                    statusDiv.textContent = "Hiba: " + error.message;
+                    statusDiv.className = "status error";
+                }
+            }
+            
+            // Kamera váltása
+            switchCameraBtn.addEventListener('click', function() {
+                useFrontCamera = !useFrontCamera;
+                startCamera();
+            });
+            
+            // Kamera indítása gomb
+            startBtn.addEventListener('click', startCamera);
+            
+            // Kép rögzítése
+            captureBtn.addEventListener('click', function() {
+                const context = canvasElement.getContext('2d');
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+                context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                
+                // Kép letöltése
+                const dataUrl = canvasElement.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = 'arfelvetel.png';
+                link.href = dataUrl;
+                link.click();
+                
+                statusDiv.textContent = "Kép rögzítve és letöltve!";
+                statusDiv.className = "status detected";
+                
+                setTimeout(() => {
+                    statusDiv.textContent = "Keresés a célkép után...";
+                    statusDiv.className = "status searching";
+                }, 3000);
             });
             
             // Szimulált felismerés gomb
             simulateBtn.addEventListener('click', function() {
-                statusDiv.textContent = "Kép felismerve!";
-                statusDiv.className = "status detected";
-                
-                // Áttetsző kép megjelenítése
-                overlayImage.style.display = 'block';
-                
-                // Kamera háttér változtatása szimulációként
-                cameraPreview.style.background = "linear-gradient(45deg, #00416a, #e4e5e6)";
-                cameraPreview.innerHTML = "Célkép felismerve!<br>Áttetsző kép megjelenítve";
-                
-                // Gomb állapotának változtatása
-                simulateBtn.disabled = true;
+                simulateRecognition();
             });
             
             // Visszaállítás gomb
             resetBtn.addEventListener('click', function() {
+                overlayImage.style.display = 'none';
                 statusDiv.textContent = "Keresés a célkép után...";
                 statusDiv.className = "status searching";
-                
-                // Áttetsző kép elrejtése
-                overlayImage.style.display = 'none';
-                
-                // Kamera visszaállítása
-                cameraPreview.style.background = "linear-gradient(45deg, #2c3e50, #4a4a8a)";
-                cameraPreview.innerHTML = "Kamera előnézet szimuláció<br>(A valós alkalmazás itt a valós kamera képe jelenne meg)";
-                
-                // Gomb állapotának visszaállítása
-                simulateBtn.disabled = false;
+                startRecognitionSimulation();
             });
             
-            // Inicializáláskor a szimulációs gomb letiltása
-            simulateBtn.disabled = true;
+            // Szimulált képfelismerés indítása
+            function startRecognitionSimulation() {
+                if (recognitionInterval) {
+                    clearInterval(recognitionInterval);
+                }
+                
+                recognitionInterval = setInterval(() => {
+                    if (Math.random() < 0.15 && !isRecognizing) { // 15% esély a felismerésre
+                        simulateRecognition();
+                    }
+                }, 2000);
+            }
+            
+            // Felismerés szimulálása
+            function simulateRecognition() {
+                isRecognizing = true;
+                overlayImage.style.display = 'block';
+                statusDiv.textContent = "Kép felismerve! AR tartalom megjelenítve.";
+                statusDiv.className = "status detected";
+                
+                // Animáció a felismeréshez
+                overlayImage.style.animation = 'none';
+                overlayImage.offsetHeight; // Trigger reflow
+                overlayImage.style.animation = 'pulse 2s infinite';
+                
+                // 5 másodperc után automatikus visszaállítás
+                setTimeout(() => {
+                    if (isRecognizing) {
+                        statusDiv.textContent = "Keresés a célkép után...";
+                        statusDiv.className = "status searching";
+                        overlayImage.style.display = 'none';
+                        isRecognizing = false;
+                        startRecognitionSimulation();
+                    }
+                }, 7000);
+            }
+            
+            // Alapértelmezett kamera indítása
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                startCamera();
+            } else {
+                statusDiv.textContent = "A böngésző nem támogatja a kamerahasználatot.";
+                statusDiv.className = "status error";
+            }
         });
     </script>
 </body>
