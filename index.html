@@ -83,6 +83,11 @@
             pointer-events: none;
         }
         
+        .detection-box.cat {
+            border: 3px solid #7986cb;
+            background: rgba(121, 134, 203, 0.2);
+        }
+        
         .detection-label {
             position: absolute;
             background: rgba(255, 171, 145, 0.9);
@@ -91,6 +96,11 @@
             border-radius: 5px;
             font-size: 14px;
             font-weight: bold;
+        }
+        
+        .detection-label.cat {
+            background: rgba(121, 134, 203, 0.9);
+            color: #1a237e;
         }
         
         .video-overlay {
@@ -106,6 +116,10 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.7);
+        }
+        
+        .video-overlay.cat {
+            border: 3px solid #7986cb;
         }
         
         .video-placeholder {
@@ -136,6 +150,28 @@
             padding: 15px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
+        }
+        
+        .animal-types {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .animal-type {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .animal-type.dog {
+            background: rgba(255, 171, 145, 0.3);
+            color: #ffccbc;
+        }
+        
+        .animal-type.cat {
+            background: rgba(121, 134, 203, 0.3);
+            color: #c5cae9;
         }
         
         button {
@@ -173,6 +209,11 @@
             background: rgba(255, 171, 145, 0.3);
             color: #ffccbc;
             animation: statusPulse 1.5s infinite;
+        }
+        
+        .detected.cat {
+            background: rgba(121, 134, 203, 0.3);
+            color: #c5cae9;
         }
         
         .searching {
@@ -244,7 +285,7 @@
             transition: width 0.5s;
         }
         
-        .dog-facts {
+        .animal-facts {
             background: rgba(255, 255, 255, 0.1);
             padding: 15px;
             border-radius: 10px;
@@ -277,6 +318,11 @@
             .button-row button {
                 min-width: 100%;
             }
+            
+            .animal-types {
+                flex-direction: column;
+                gap: 8px;
+            }
         }
     </style>
 </head>
@@ -285,11 +331,11 @@
     
     <div class="container">
         <div class="instructions">
-            <p><strong>Használati útmutató:</strong> Engedélyezd a kamerához való hozzáférést. Az alkalmazás a TensorFlow.js segítségével kizárólag kutyákat ismer fel. Amikor a rendszer felismer egy kutyát, hanggal elindítja a YouTube videót. Ha a kutya elhagyja a képteret, a videó leáll.</p>
+            <p><strong>Használati útmutató:</strong> Engedélyezd a kamerához való hozzáférést. Az alkalmazás a TensorFlow.js segítségével kutyákat és macskákat ismer fel. Amikor a rendszer felismer egy állatot, hanggal elindítja a YouTube videót. Ha az állat elhagyja a képteret, a videó leáll.</p>
         </div>
         
         <div class="loading" id="loading">
-            <p>Kutyafelismerő modell betöltése...</p>
+            <p>Állatfelismerő modell betöltése...</p>
             <div class="progress-bar">
                 <div class="progress" id="progress"></div>
             </div>
@@ -300,18 +346,21 @@
             <canvas id="canvas-element"></canvas>
             <div class="video-overlay" id="video-overlay">
                 <div class="video-placeholder" id="video-placeholder">
-                    Kutyafelismerés! Videó lejátszása...
+                    Állat felismerve! Videó lejátszása...
                 </div>
                 <iframe id="youtube-video" width="100%" height="100%" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display:none;"></iframe>
             </div>
             <!-- Detection boxes will be added here dynamically -->
         </div>
         
-        <div id="status" class="status searching">Keresés kutyák után...</div>
+        <div id="status" class="status searching">Keresés állatok után...</div>
         
         <div class="target-info">
-            <h3>Amikor a kamera kutyát észlel, lejátsza ezt a videót:</h3>
-            <p>https://youtu.be/tn5wmfypE6s</p>
+            <h3>Amikor a kamera állatot észlel, lejátsza a megfelelő videót:</h3>
+            <div class="animal-types">
+                <div class="animal-type dog">Kutya: https://youtu.be/tn5wmfypE6s</div>
+                <div class="animal-type cat">Macska: https://youtu.be/pcBr1ynR474</div>
+            </div>
         </div>
         
         <div class="controls">
@@ -321,17 +370,17 @@
                 <button id="capture-btn">Kép rögzítése</button>
             </div>
             <div class="button-row">
-                <button id="toggle-detection-btn">Kutyakeresés ki</button>
+                <button id="toggle-detection-btn">Állatkeresés ki</button>
                 <button id="reset-btn">Visszaállítás</button>
             </div>
         </div>
         
-        <div class="dog-facts">
-            <p>💡 Tudtad, hogy a kutyák hallása sokkal érzékenyebb az emberénél? Akár 67 Hz-től 45 000 Hz-ig hallhatnak, míg az emberek csak 20 Hz-től 20 000 Hz-ig.</p>
+        <div class="animal-facts">
+            <p>💡 Tudtad, hogy a macskák 100 különböző hangot tudnak kiadni, míg a kutyák csak kb. 10-et? A macskák tapintása is sokkal érzékenyebb, mint az embereké.</p>
         </div>
         
         <div class="info">
-            <p>Ez az alkalmazás a TensorFlow.js és a COCO-SSD modell segítségével valósítja meg a kutyafelismerést. Amikor a kamera kutyát észlel, automatikusan hanggal elindítja a YouTube videót. Ha a kutya elhagyja a képteret, a videó leáll.</p>
+            <p>Ez az alkalmazás a TensorFlow.js és a COCO-SSD modell segítségével valósítja meg az állatfelismerést. Amikor a kamera kutyát vagy macskát észlel, automatikusan hanggal elindítja a YouTube videót. Ha az állat elhagyja a képteret, a videó leáll.</p>
         </div>
     </div>
 
@@ -356,14 +405,17 @@
             let model = null;
             let detectionInterval = null;
             let isDetecting = false;
-            let detectedDogs = [];
+            let detectedAnimals = [];
             let isVideoPlaying = false;
             let videoTimeout = null;
-            let dogDetectionTime = 0;
-            let lastDogDetected = 0;
+            let lastAnimalDetected = 0;
+            let currentAnimalType = null;
             
-            // YouTube videó URL (hanggal)
-            const youtubeURL = "https://www.youtube.com/embed/tn5wmfypE6s?autoplay=1";
+            // YouTube videó URL-ek
+            const youtubeURLs = {
+                dog: "https://www.youtube.com/embed/tn5wmfypE6s?autoplay=1",
+                cat: "https://www.youtube.com/embed/pcBr1ynR474?autoplay=1"
+            };
             
             // Betöltési folyamat szimulálása
             async function simulateLoading() {
@@ -377,7 +429,7 @@
             // TensorFlow.js modell betöltése
             async function loadModel() {
                 try {
-                    statusDiv.textContent = "Kutyafelismerő modell betöltése...";
+                    statusDiv.textContent = "Állatfelismerő modell betöltése...";
                     statusDiv.className = "status searching";
                     
                     // COCO-SSD modell betöltése
@@ -423,10 +475,10 @@
                         videoElement.style.transform = "scaleX(1)";
                     }
                     
-                    statusDiv.textContent = "Kamera elérve. Kutyák keresése...";
+                    statusDiv.textContent = "Kamera elérve. Állatok keresése...";
                     
-                    // Kutyakeresés indítása
-                    startDogDetection();
+                    // Állatkeresés indítása
+                    startAnimalDetection();
                     
                 } catch (error) {
                     console.error("Hiba a kamera indításakor:", error);
@@ -435,25 +487,25 @@
                 }
             }
             
-            // Kutyakeresés indítása
-            function startDogDetection() {
+            // Állatkeresés indítása
+            function startAnimalDetection() {
                 if (detectionInterval) {
                     clearInterval(detectionInterval);
                 }
                 
                 isDetecting = true;
-                toggleDetectionBtn.textContent = "Kutyakeresés ki";
+                toggleDetectionBtn.textContent = "Állatkeresés ki";
                 
-                // Kutyák felismerése rendszeres időközönként
+                // Állatok felismerése rendszeres időközönként
                 detectionInterval = setInterval(async () => {
                     if (model && isDetecting) {
-                        detectDogs();
+                        detectAnimals();
                     }
                 }, 1000);
             }
             
-            // Kutyák felismerése
-            async function detectDogs() {
+            // Állatok felismerése
+            async function detectAnimals() {
                 if (!model || !isDetecting) return;
                 
                 try {
@@ -463,49 +515,56 @@
                     // Előző detektálási eredmények törlése
                     clearDetections();
                     
-                    // Csak kutyák szűrése
-                    const dogs = predictions.filter(prediction => 
-                        prediction.class === 'dog' && prediction.score > 0.6
+                    // Csak kutyák és macskák szűrése
+                    const animals = predictions.filter(prediction => 
+                        (prediction.class === 'dog' || prediction.class === 'cat') && prediction.score > 0.6
                     );
                     
                     const currentTime = Date.now();
                     
-                    if (dogs.length > 0) {
-                        detectedDogs = dogs;
-                        displayDetections(dogs);
+                    if (animals.length > 0) {
+                        detectedAnimals = animals;
+                        displayDetections(animals);
                         
-                        statusDiv.textContent = `${dogs.length} kutya felismerve!`;
-                        statusDiv.className = "status detected";
+                        // Elsődleges állat típus meghatározása (prioritás: kutya)
+                        const primaryAnimal = animals.find(a => a.class === 'dog') || animals[0];
+                        const animalType = primaryAnimal.class;
                         
-                        // Kutya észlelése időpontjának mentése
-                        lastDogDetected = currentTime;
+                        statusDiv.textContent = `${animals.length} állat felismerve! (${animalType === 'dog' ? 'Kutya' : 'Macska'})`;
+                        statusDiv.className = `status detected ${animalType}`;
                         
-                        // Videó lejátszása, ha még nem megy
-                        if (!isVideoPlaying) {
-                            playVideo();
+                        // Állat észlelése időpontjának mentése
+                        lastAnimalDetected = currentTime;
+                        
+                        // Videó lejátszása, ha még nem megy vagy más állatot észlelünk
+                        if (!isVideoPlaying || currentAnimalType !== animalType) {
+                            currentAnimalType = animalType;
+                            playVideo(animalType);
                         }
                         
                     } else {
-                        statusDiv.textContent = "Keresés kutyák után...";
+                        statusDiv.textContent = "Keresés állatok után...";
                         statusDiv.className = "status searching";
                         
-                        // Ha 3 másodperce nem látunk kutyát, leállítjuk a videót
-                        if (isVideoPlaying && (currentTime - lastDogDetected > 3000)) {
+                        // Ha 3 másodperce nem látunk állatot, leállítjuk a videót
+                        if (isVideoPlaying && (currentTime - lastAnimalDetected > 3000)) {
                             hideVideo();
+                            currentAnimalType = null;
                         }
                     }
                 } catch (error) {
-                    console.error("Hiba a kutya felismerése során:", error);
+                    console.error("Hiba az állat felismerése során:", error);
                 }
             }
             
             // Videó lejátszása
-            function playVideo() {
+            function playVideo(animalType) {
                 isVideoPlaying = true;
                 videoOverlay.style.display = 'block';
+                videoOverlay.className = `video-overlay ${animalType}`;
                 videoPlaceholder.style.display = 'none';
                 youtubeVideo.style.display = 'block';
-                youtubeVideo.src = youtubeURL;
+                youtubeVideo.src = youtubeURLs[animalType];
             }
             
             // Videó elrejtése
@@ -518,6 +577,7 @@
                 
                 videoPlaceholder.style.display = 'flex';
                 youtubeVideo.style.display = 'none';
+                videoOverlay.className = 'video-overlay';
             }
             
             // YouTube videó leállítása
@@ -526,14 +586,14 @@
                 youtubeVideo.src = "";
             }
             
-            // Detektált kutyák megjelenítése
-            function displayDetections(dogs) {
+            // Detektált állatok megjelenítése
+            function displayDetections(animals) {
                 const videoWidth = videoElement.videoWidth;
                 const videoHeight = videoElement.videoHeight;
                 const container = document.querySelector('.camera-container');
                 
-                dogs.forEach(dog => {
-                    const [x, y, width, height] = dog.bbox;
+                animals.forEach(animal => {
+                    const [x, y, width, height] = animal.bbox;
                     
                     // Skálázás a videó méretéhez
                     const scaleX = videoElement.offsetWidth / videoWidth;
@@ -541,7 +601,7 @@
                     
                     // Detektálási doboz
                     const box = document.createElement('div');
-                    box.className = 'detection-box';
+                    box.className = `detection-box ${animal.class}`;
                     box.style.left = `${x * scaleX}px`;
                     box.style.top = `${y * scaleY}px`;
                     box.style.width = `${width * scaleX}px`;
@@ -549,8 +609,8 @@
                     
                     // Címke
                     const label = document.createElement('div');
-                    label.className = 'detection-label';
-                    label.textContent = `Kutya (${Math.round(dog.score * 100)}%)`;
+                    label.className = `detection-label ${animal.class}`;
+                    label.textContent = `${animal.class === 'dog' ? 'Kutya' : 'Macska'} (${Math.round(animal.score * 100)}%)`;
                     label.style.left = `${x * scaleX}px`;
                     label.style.top = `${(y * scaleY) - 25}px`;
                     
@@ -570,23 +630,25 @@
                 useFrontCamera = !useFrontCamera;
                 startCamera();
                 hideVideo();
+                currentAnimalType = null;
             });
             
-            // Kutyakeresés ki/be kapcsolása
+            // Állatkeresés ki/be kapcsolása
             toggleDetectionBtn.addEventListener('click', function() {
                 isDetecting = !isDetecting;
                 
                 if (isDetecting) {
-                    toggleDetectionBtn.textContent = "Kutyakeresés ki";
-                    startDogDetection();
-                    statusDiv.textContent = "Kutyák keresése...";
+                    toggleDetectionBtn.textContent = "Állatkeresés ki";
+                    startAnimalDetection();
+                    statusDiv.textContent = "Állatok keresése...";
                     statusDiv.className = "status searching";
                 } else {
-                    toggleDetectionBtn.textContent = "Kutyakeresés be";
+                    toggleDetectionBtn.textContent = "Állatkeresés be";
                     clearInterval(detectionInterval);
                     clearDetections();
                     hideVideo();
-                    statusDiv.textContent = "Kutyakeresés kikapcsolva";
+                    currentAnimalType = null;
+                    statusDiv.textContent = "Állatkeresés kikapcsolva";
                     statusDiv.className = "status";
                 }
             });
@@ -595,6 +657,7 @@
             startBtn.addEventListener('click', function() {
                 startCamera();
                 hideVideo();
+                currentAnimalType = null;
             });
             
             // Kép rögzítése
@@ -613,29 +676,29 @@
                 }
                 
                 // Detektálási dobozok hozzáadása
-                detectedDogs.forEach(dog => {
-                    const [x, y, width, height] = dog.bbox;
-                    context.strokeStyle = '#ffab91';
+                detectedAnimals.forEach(animal => {
+                    const [x, y, width, height] = animal.bbox;
+                    context.strokeStyle = animal.class === 'dog' ? '#ffab91' : '#7986cb';
                     context.lineWidth = 3;
                     context.strokeRect(x, y, width, height);
                     
-                    context.fillStyle = 'rgba(255, 171, 145, 0.8)';
+                    context.fillStyle = animal.class === 'dog' ? 'rgba(255, 171, 145, 0.8)' : 'rgba(121, 134, 203, 0.8)';
                     context.font = '16px Arial';
-                    context.fillText(`Kutya (${Math.round(dog.score * 100)}%)`, x, y > 20 ? y - 5 : 15);
+                    context.fillText(`${animal.class === 'dog' ? 'Kutya' : 'Macska'} (${Math.round(animal.score * 100)}%)`, x, y > 20 ? y - 5 : 15);
                 });
                 
                 // Kép letöltése
                 const dataUrl = canvasElement.toDataURL('image/png');
                 const link = document.createElement('a');
-                link.download = 'kutya_felismeres.png';
+                link.download = 'allat_felismeres.png';
                 link.href = dataUrl;
                 link.click();
                 
-                statusDiv.textContent = "Kutya képe rögzítve!";
-                statusDiv.className = "status detected";
+                statusDiv.textContent = "Állat képe rögzítve!";
+                statusDiv.className = `status detected ${currentAnimalType || 'dog'}`;
                 
                 setTimeout(() => {
-                    statusDiv.textContent = "Kutyák keresése...";
+                    statusDiv.textContent = "Állatok keresése...";
                     statusDiv.className = "status searching";
                 }, 3000);
             });
@@ -644,9 +707,10 @@
             resetBtn.addEventListener('click', function() {
                 clearDetections();
                 hideVideo();
-                statusDiv.textContent = "Kutyák keresése...";
+                currentAnimalType = null;
+                statusDiv.textContent = "Állatok keresése...";
                 statusDiv.className = "status searching";
-                startDogDetection();
+                startAnimalDetection();
             });
             
             // Oldal betöltése
