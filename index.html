@@ -25,7 +25,7 @@
         .container {
             max-width: 800px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 25px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
@@ -53,17 +53,30 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            background: linear-gradient(45deg, #2c3e50, #4a4a8a);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 1.2rem;
+            text-align: center;
+            padding: 20px;
         }
         
         .overlay-image {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60%;
+            height: auto;
+            max-height: 70%;
             object-fit: contain;
             display: none;
             z-index: 10;
+            border: 3px solid white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
         
         .controls {
@@ -99,6 +112,7 @@
             font-size: 1.1rem;
             cursor: pointer;
             transition: background 0.3s;
+            margin: 5px 0;
         }
         
         button:hover {
@@ -131,6 +145,14 @@
             margin-top: 20px;
         }
         
+        .instructions {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -150,25 +172,32 @@
     <h1>Képfelismerős Mobilapp</h1>
     
     <div class="container">
+        <div class="instructions">
+            <p>Ez egy szimulált képfelismerős alkalmazás. A valós implementációhoz kamera-hozzáférés és képfeldolgozó algoritmusok szükségesek.</p>
+        </div>
+        
         <div class="camera-container">
-            <img id="camera-preview" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Kamera előnézet">
-            <img id="overlay" class="overlay-image" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Áttetsző kép">
+            <div id="camera-preview">
+                Kamera előnézet szimuláció<br>(A valós alkalmazás itt a valós kamera képe jelenne meg)
+            </div>
+            <img id="overlay" class="overlay-image" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMjAwIDIwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiM0YTRhOGEiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSI+JmFjdXRlOHRldHN6Jm9hY3V0ZTtLJmVhY3V0ZTtwPC90ZXh0Pjwvc3ZnPg==" alt="Áttetsző kép">
         </div>
         
         <div id="status" class="status searching">Keresés a célkép után...</div>
         
         <div class="target-image">
             <h3>Felismerendő kép</h3>
-            <img id="target-img" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Célkép">
+            <img id="target-img" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMjAwIDE1MCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiM2ZThlZmIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjIwIiBmaWxsPSJ3aGl0ZSI+Q8OpbCBrJmVhY3V0ZTtwPC90ZXh0Pjwvc3ZnPg==" alt="Célkép">
         </div>
         
         <div class="controls">
-            <button id="start-btn">Kamera indítása</button>
+            <button id="start-btn">Kamera indítása (Szimulált)</button>
             <button id="simulate-btn">Szimulált felismerés</button>
+            <button id="reset-btn">Visszaállítás</button>
         </div>
         
         <div class="info">
-            <p>Ez egy demonstráció, amely bemutatja, hogyan működhet egy képet felismerő mobilalkalmazás. A valós implementációhoz szükséges lenne:</p>
+            <p>A valós implementációhoz szükséges lenne:</p>
             <ul>
                 <li>Valós kamerahasználat (getUserMedia API)</li>
                 <li>Képfelismerő algoritmus (pl. TensorFlow.js, OpenCV)</li>
@@ -184,21 +213,20 @@
             const statusDiv = document.getElementById('status');
             const startBtn = document.getElementById('start-btn');
             const simulateBtn = document.getElementById('simulate-btn');
+            const resetBtn = document.getElementById('reset-btn');
             const targetImg = document.getElementById('target-img');
-            
-            // Minta képek beállítása
-            cameraPreview.src = "https://placehold.co/600x400/4a4a8a/white?text=Kamera+Előnézet";
-            overlayImage.src = "https://placehold.co/400x300/6e8efb/white?text=Áttetsző+Kép";
-            targetImg.src = "https://placehold.co/200x150/4a4a8a/white?text=Célkép";
             
             // Kamera indítása gomb
             startBtn.addEventListener('click', function() {
                 statusDiv.textContent = "Kamera indítása...";
                 statusDiv.className = "status searching";
                 
-                // Itt a valós implementációban a kamera elérése történne
+                // Kamera szimuláció
                 setTimeout(() => {
+                    cameraPreview.innerHTML = "Kamera aktív<br>(A valós alkalmazásban itt a valós kamera képe látható)";
+                    cameraPreview.style.background = "linear-gradient(45deg, #1a2a6c, #b21f1f, #fdbb2d)";
                     statusDiv.textContent = "Kamera elérve. Keresés a célkép után...";
+                    simulateBtn.disabled = false;
                 }, 1500);
             });
             
@@ -210,25 +238,32 @@
                 // Áttetsző kép megjelenítése
                 overlayImage.style.display = 'block';
                 
-                // 5 másodperc után visszaállítás
-                setTimeout(() => {
-                    statusDiv.textContent = "Keresés a célkép után...";
-                    statusDiv.className = "status searching";
-                    overlayImage.style.display = 'none';
-                }, 5000);
+                // Kamera háttér változtatása szimulációként
+                cameraPreview.style.background = "linear-gradient(45deg, #00416a, #e4e5e6)";
+                cameraPreview.innerHTML = "Célkép felismerve!<br>Áttetsző kép megjelenítve";
+                
+                // Gomb állapotának változtatása
+                simulateBtn.disabled = true;
             });
             
-            // Egyszerű mozgásérzékelés szimulálása
-            let lastMove = Date.now();
-            setInterval(() => {
-                if (Date.now() - lastMove > 700) {
-                    cameraPreview.style.opacity = 0.95;
-                    setTimeout(() => {
-                        cameraPreview.style.opacity = 1;
-                    }, 200);
-                    lastMove = Date.now();
-                }
-            }, 1000);
+            // Visszaállítás gomb
+            resetBtn.addEventListener('click', function() {
+                statusDiv.textContent = "Keresés a célkép után...";
+                statusDiv.className = "status searching";
+                
+                // Áttetsző kép elrejtése
+                overlayImage.style.display = 'none';
+                
+                // Kamera visszaállítása
+                cameraPreview.style.background = "linear-gradient(45deg, #2c3e50, #4a4a8a)";
+                cameraPreview.innerHTML = "Kamera előnézet szimuláció<br>(A valós alkalmazás itt a valós kamera képe jelenne meg)";
+                
+                // Gomb állapotának visszaállítása
+                simulateBtn.disabled = false;
+            });
+            
+            // Inicializáláskor a szimulációs gomb letiltása
+            simulateBtn.disabled = true;
         });
     </script>
 </body>
