@@ -285,7 +285,7 @@
     
     <div class="container">
         <div class="instructions">
-            <p><strong>Használati útmutató:</strong> Engedélyezd a kamerához való hozzáférést. Az alkalmazás a TensorFlow.js segítségével kizárólag kutyákat ismer fel. Amikor a rendszer felismer egy kutyát, lejátsza a megadott YouTube videót.</p>
+            <p><strong>Használati útmutató:</strong> Engedélyezd a kamerához való hozzáférést. Az alkalmazás a TensorFlow.js segítségével kizárólag kutyákat ismer fel. Amikor a rendszer felismer egy kutyát, hanggal elindítja a YouTube videót. Ha a kutya elhagyja a képteret, a videó leáll.</p>
         </div>
         
         <div class="loading" id="loading">
@@ -331,7 +331,7 @@
         </div>
         
         <div class="info">
-            <p>Ez az alkalmazás a TensorFlow.js és a COCO-SSD modell segítségével valósítja meg a kutyafelismerést. Amikor a kamera kutyát észlel, automatikusan lejátsza a megadott YouTube videót.</p>
+            <p>Ez az alkalmazás a TensorFlow.js és a COCO-SSD modell segítségével valósítja meg a kutyafelismerést. Amikor a kamera kutyát észlel, automatikusan hanggal elindítja a YouTube videót. Ha a kutya elhagyja a képteret, a videó leáll.</p>
         </div>
     </div>
 
@@ -359,9 +359,11 @@
             let detectedDogs = [];
             let isVideoPlaying = false;
             let videoTimeout = null;
+            let dogDetectionTime = 0;
+            let lastDogDetected = 0;
             
-            // YouTube videó URL
-            const youtubeURL = "https://www.youtube.com/embed/tn5wmfypE6s?autoplay=1&mute=1";
+            // YouTube videó URL (hanggal)
+            const youtubeURL = "https://www.youtube.com/embed/tn5wmfypE6s?autoplay=1";
             
             // Betöltési folyamat szimulálása
             async function simulateLoading() {
@@ -466,6 +468,8 @@
                         prediction.class === 'dog' && prediction.score > 0.6
                     );
                     
+                    const currentTime = Date.now();
+                    
                     if (dogs.length > 0) {
                         detectedDogs = dogs;
                         displayDetections(dogs);
@@ -473,16 +477,22 @@
                         statusDiv.textContent = `${dogs.length} kutya felismerve!`;
                         statusDiv.className = "status detected";
                         
+                        // Kutya észlelése időpontjának mentése
+                        lastDogDetected = currentTime;
+                        
                         // Videó lejátszása, ha még nem megy
                         if (!isVideoPlaying) {
                             playVideo();
                         }
                         
-                        // Videó időzítő újraindítása
-                        resetVideoTimer();
                     } else {
                         statusDiv.textContent = "Keresés kutyák után...";
                         statusDiv.className = "status searching";
+                        
+                        // Ha 3 másodperce nem látunk kutyát, leállítjuk a videót
+                        if (isVideoPlaying && (currentTime - lastDogDetected > 3000)) {
+                            hideVideo();
+                        }
                     }
                 } catch (error) {
                     console.error("Hiba a kutya felismerése során:", error);
@@ -502,21 +512,18 @@
             function hideVideo() {
                 isVideoPlaying = false;
                 videoOverlay.style.display = 'none';
-                youtubeVideo.src = "";
+                
+                // YouTube API használata a videó leállításához
+                stopVideo();
+                
                 videoPlaceholder.style.display = 'flex';
                 youtubeVideo.style.display = 'none';
             }
             
-            // Videó időzítő újraindítása
-            function resetVideoTimer() {
-                if (videoTimeout) {
-                    clearTimeout(videoTimeout);
-                }
-                
-                // 30 másodperc után elrejtjük a videót
-                videoTimeout = setTimeout(() => {
-                    hideVideo();
-                }, 30000);
+            // YouTube videó leállítása
+            function stopVideo() {
+                // A videó leállítása iframe src módosításával
+                youtubeVideo.src = "";
             }
             
             // Detektált kutyák megjelenítése
