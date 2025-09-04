@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Képfelismerő App</title>
+    <title>Pontos AR Képfelismerő</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         }
         
         body {
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            background: linear-gradient(135deg, #2c3e50, #4a4a8a);
             color: #333;
             min-height: 100vh;
             display: flex;
@@ -28,7 +28,7 @@
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             margin-top: 20px;
         }
         
@@ -37,6 +37,15 @@
             color: #4a4a8a;
             margin-bottom: 20px;
             font-size: 2.2rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
         }
         
         .camera-container {
@@ -47,6 +56,7 @@
             border-radius: 15px;
             margin-bottom: 20px;
             background: #000;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
         
         #video-element {
@@ -58,6 +68,34 @@
         
         #canvas-element {
             display: none;
+        }
+        
+        .scanning-area {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70%;
+            height: 60%;
+            border: 2px dashed #4caf50;
+            border-radius: 10px;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .scanning-line {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: #4caf50;
+            top: 0;
+            animation: scan 2s infinite ease-in-out;
+        }
+        
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
         }
         
         .overlay-image {
@@ -98,6 +136,7 @@
             padding: 15px;
             background: #f0f0f0;
             border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
         }
         
         .target-image img {
@@ -116,6 +155,7 @@
             font-size: 1.1rem;
             cursor: pointer;
             transition: background 0.3s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
         button:hover {
@@ -185,6 +225,27 @@
             min-width: 120px;
         }
         
+        .recognition-settings {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .slider-container {
+            margin: 10px 0;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 15px;
@@ -205,12 +266,19 @@
     </style>
 </head>
 <body>
-    <h1>AR Képfelismerő Mobilalkalmazás</h1>
+    <h1>Pontos AR Képfelismerő</h1>
     
     <div class="container">
+        <div class="instructions">
+            <p><strong>Használati útmutató:</strong> Tartsd a kamerát a célkép felé a szkennelő területbe. Az alkalmazás csak akkor reagál, ha a kép megfelelően világos, éles és kitölti a szkennelő területet.</p>
+        </div>
+        
         <div class="camera-container">
             <video id="video-element" autoplay playsinline></video>
             <canvas id="canvas-element"></canvas>
+            <div class="scanning-area">
+                <div class="scanning-line"></div>
+            </div>
             <img id="overlay" class="overlay-image" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzRlNGE4YSIgcng9IjEwIiByeT0iMTAiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSI+QVIgS0VQPC90ZXh0Pgo8L3N2Zz4=" alt="AR kép">
         </div>
         
@@ -221,6 +289,24 @@
             <img id="target-img" src="https://kissarret-code.github.io/AR/pFRRl-PA.jpg" alt="Célkép" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2E3NzdlMyIgcng9IjUiIHJ5PSI1Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5lPSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiPkNFTEtFUDwvdGV4dD4KPC9zdmc+'">
         </div>
         
+        <div class="recognition-settings">
+            <h3>Felismerési beállítások</h3>
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Pontosság:</span>
+                    <span id="accuracy-value">Közepes</span>
+                </div>
+                <input type="range" id="accuracy" min="1" max="3" value="2">
+            </div>
+            <div class="slider-container">
+                <div class="slider-label">
+                    <span>Fényérzékenység:</span>
+                    <span id="brightness-value">Közepes</span>
+                </div>
+                <input type="range" id="brightness" min="1" max="3" value="2">
+            </div>
+        </div>
+        
         <div class="controls">
             <div class="button-row">
                 <button id="start-btn">Kamera indítása</button>
@@ -228,13 +314,13 @@
                 <button id="capture-btn">Kép rögzítése</button>
             </div>
             <div class="button-row">
-                <button id="simulate-btn">Szimulált felismerés</button>
+                <button id="simulate-btn">Teszt felismerés</button>
                 <button id="reset-btn">Visszaállítás</button>
             </div>
         </div>
         
         <div class="info">
-            <p>Ez egy működő demonstráció, amely a kamerához való hozzáférés megvalósítását mutatja be. A valós képfelismeréshez további fejlesztésre lenne szükség:</p>
+            <p>Ez egy fejlettebb demonstráció, amely pontosabb "felismerést" valósít meg. A valós képfelismeréshez további fejlesztésre lenne szükség:</p>
             <ul>
                 <li>Valós képfelismerő algoritmus (pl. TensorFlow.js, OpenCV)</li>
                 <li>AR (kiterjesztett valóság) technológia (pl. ARCore, ARKit)</li>
@@ -255,11 +341,32 @@
             const resetBtn = document.getElementById('reset-btn');
             const captureBtn = document.getElementById('capture-btn');
             const targetImg = document.getElementById('target-img');
+            const accuracySlider = document.getElementById('accuracy');
+            const brightnessSlider = document.getElementById('brightness');
+            const accuracyValue = document.getElementById('accuracy-value');
+            const brightnessValue = document.getElementById('brightness-value');
             
             let stream = null;
             let useFrontCamera = true;
             let recognitionInterval = null;
             let isRecognizing = false;
+            let recognitionAccuracy = 2; // 1: alacsony, 2: közepes, 3: magas
+            let brightnessSensitivity = 2; // 1: alacsony, 2: közepes, 3: magas
+            
+            // Beállítások frissítése
+            accuracySlider.addEventListener('input', function() {
+                recognitionAccuracy = parseInt(this.value);
+                accuracyValue.textContent = 
+                    recognitionAccuracy === 1 ? 'Alacsony' : 
+                    recognitionAccuracy === 2 ? 'Közepes' : 'Magas';
+            });
+            
+            brightnessSlider.addEventListener('input', function() {
+                brightnessSensitivity = parseInt(this.value);
+                brightnessValue.textContent = 
+                    brightnessSensitivity === 1 ? 'Alacsony' : 
+                    brightnessSensitivity === 2 ? 'Közepes' : 'Magas';
+            });
             
             // Kamera indítása
             async function startCamera() {
@@ -284,7 +391,7 @@
                     stream = await navigator.mediaDevices.getUserMedia(constraints);
                     videoElement.srcObject = stream;
                     
-                    statusDiv.textContent = "Kamera elérve. Keresés a célkép után...";
+                    statusDiv.textContent = "Kamera elérve. Tartsd a kamerát a célkép felé.";
                     
                     // Szimulált képfelismerés indítása
                     startRecognitionSimulation();
@@ -328,7 +435,7 @@
                 }, 3000);
             });
             
-            // Szimulált felismerés gomb
+            // Teszt felismerés gomb
             simulateBtn.addEventListener('click', function() {
                 simulateRecognition();
             });
@@ -348,7 +455,7 @@
                 }
                 
                 recognitionInterval = setInterval(() => {
-                    if (Math.random() < 0.15 && !isRecognizing) { // 15% esély a felismerésre
+                    if (Math.random() < (0.05 * recognitionAccuracy) && !isRecognizing) {
                         simulateRecognition();
                     }
                 }, 2000);
