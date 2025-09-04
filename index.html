@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Képfelismerős Mobilapp</title>
+    <title>Pontos Képfelismerő AR Alkalmazás</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
     <style>
         * {
             margin: 0;
@@ -13,8 +15,8 @@
         }
         
         body {
-            background: linear-gradient(135deg, #6e8efb, #a777e3);
-            color: #333;
+            background: linear-gradient(135deg, #2c3e50, #1a237e);
+            color: #fff;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -23,51 +25,78 @@
         }
         
         .container {
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             margin-top: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         h1 {
             text-align: center;
-            color: #4a4a8a;
+            color: #fff;
             margin-bottom: 20px;
-            font-size: 2.2rem;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4fc3f7;
+            color: #e3f2fd;
         }
         
         .camera-container {
             position: relative;
             width: 100%;
-            height: 350px;
+            height: 400px;
             overflow: hidden;
             border-radius: 15px;
             margin-bottom: 20px;
             background: #000;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
         }
         
         #video-element {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Alapértelmezett tükrözés front camera miatt */
         }
         
         #canvas-element {
             display: none;
         }
         
+        .detection-box {
+            position: absolute;
+            border: 3px solid #4caf50;
+            border-radius: 5px;
+            background: rgba(76, 175, 80, 0.2);
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .detection-label {
+            position: absolute;
+            background: rgba(76, 175, 80, 0.8);
+            color: white;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
         .overlay-image {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 60%;
+            width: 100px;
             height: auto;
-            max-height: 70%;
             object-fit: contain;
             display: none;
             z-index: 10;
@@ -78,9 +107,9 @@
         }
         
         @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.05); }
-            100% { transform: translate(-50%, -50%) scale(1); }
+            0% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.9; }
         }
         
         .controls {
@@ -96,7 +125,7 @@
             align-items: center;
             margin: 15px 0;
             padding: 15px;
-            background: #f0f0f0;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
         }
         
@@ -111,16 +140,17 @@
             padding: 15px 20px;
             border: none;
             border-radius: 10px;
-            background: #4a4a8a;
+            background: linear-gradient(to right, #4a4a8a, #6e8efb);
             color: white;
             font-size: 1.1rem;
             cursor: pointer;
-            transition: background 0.3s, transform 0.2s;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
         }
         
         button:hover {
-            background: #6e8efb;
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            box-shadow: 0 7px 10px rgba(0,0,0,0.3);
         }
         
         button:active {
@@ -133,33 +163,34 @@
             text-align: center;
             margin: 15px 0;
             font-weight: bold;
+            background: rgba(255, 255, 255, 0.1);
         }
         
         .detected {
-            background: #d4edda;
-            color: #155724;
+            background: rgba(76, 175, 80, 0.3);
+            color: #a5d6a7;
             animation: statusPulse 1.5s infinite;
         }
         
         .searching {
-            background: #fff3cd;
-            color: #856404;
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffe082;
         }
         
         .error {
-            background: #f8d7da;
-            color: #721c24;
+            background: rgba(244, 67, 54, 0.3);
+            color: #ffab91;
         }
         
         @keyframes statusPulse {
             0% { opacity: 1; }
-            50% { opacity: 0.8; }
+            50% { opacity: 0.7; }
             100% { opacity: 1; }
         }
         
         .info {
-            background: #d1ecf1;
-            color: #0c5460;
+            background: rgba(3, 169, 244, 0.2);
+            color: #b3e5fc;
             padding: 15px;
             border-radius: 10px;
             margin-top: 20px;
@@ -178,11 +209,36 @@
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
+            justify-content: center;
         }
         
         .button-row button {
             flex: 1;
-            min-width: 120px;
+            min-width: 160px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(to right, #4caf50, #8bc34a);
+            width: 0%;
+            transition: width 0.5s;
         }
         
         @media (max-width: 600px) {
@@ -195,30 +251,52 @@
             }
             
             .camera-container {
-                height: 250px;
+                height: 300px;
             }
             
             .button-row {
                 flex-direction: column;
             }
+            
+            .button-row button {
+                min-width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>AR Képfelismerő Mobilalkalmazás</h1>
+    <h1>Pontos AR Képfelismerő</h1>
     
     <div class="container">
+        <div class="instructions">
+            <p><strong>Használati útmutató:</strong> Engedélyezd a kamerához való hozzáférést. Az alkalmazás a TensorFlow.js segítségével valós idejű objektumfelismerést végez. Amikor a rendszer felismer egy objektumot, zöld keretezéssel és AR tartalommal jelzi.</p>
+        </div>
+        
+        <div class="loading" id="loading">
+            <p>Modell betöltése...</p>
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+        </div>
+        
         <div class="camera-container">
             <video id="video-element" autoplay playsinline></video>
             <canvas id="canvas-element"></canvas>
-            <img id="overlay" class="overlay-image" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzRlNGE4YSIgcng9IjEwIiByeT0iMTAiLz4KICA8dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjI0IiBmaWxsPSJ3aGl0ZSI+QVIgS0VQPC90ZXh0Pgo8L3N2Zz4=" alt="AR kép">
+            <!-- Detection boxes will be added here dynamically -->
         </div>
         
-        <div id="status" class="status searching">Keresés a célkép után...</div>
+        <div id="status" class="status searching">Keresés objektumok után...</div>
         
         <div class="target-image">
-            <h3>Felismerendő kép</h3>
-            <img id="target-img" src="https://kissarret-code.github.io/AR/pFRRl-PA.jpg" alt="Célkép" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iI2E3NzdlMyIgcng9IjUiIHJ5PSI1Ii8+CiAgPHRleHQgeD0iNTAlIiB5PSI1MCUiIGRvbWluYW50LWJhc2VsaW5ePSJtaWRkbGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiPkNFTEtFUDwvdGV4dD4KPC9zdmc+'">
+            <h3>Példa felismerhető objektumok</h3>
+            <p>Az alkalmazás az alábbi tárgyakat képes felismerni:</p>
+            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
+                <span style="background: rgba(76, 175, 80, 0.3); padding: 5px 10px; border-radius: 15px;">Telefon</span>
+                <span style="background: rgba(76, 175, 80, 0.3); padding: 5px 10px; border-radius: 15px;">Kulcs</span>
+                <span style="background: rgba(76, 175, 80, 0.3); padding: 5px 10px; border-radius: 15px;">Pohár</span>
+                <span style="background: rgba(76, 175, 80, 0.3); padding: 5px 10px; border-radius: 15px;">Könyv</span>
+                <span style="background: rgba(76, 175, 80, 0.3); padding: 5px 10px; border-radius: 15px;">Egér</span>
+            </div>
         </div>
         
         <div class="controls">
@@ -228,38 +306,68 @@
                 <button id="capture-btn">Kép rögzítése</button>
             </div>
             <div class="button-row">
-                <button id="simulate-btn">Szimulált felismerés</button>
+                <button id="toggle-detection-btn">Objektumfelismerés ki</button>
                 <button id="reset-btn">Visszaállítás</button>
             </div>
         </div>
         
         <div class="info">
-            <p>Ez egy működő demonstráció, amely a kamerához való hozzáférés megvalósítását mutatja be. A valós képfelismeréshez további fejlesztésre lenne szükség:</p>
+            <p>Ez az alkalmazás a TensorFlow.js és a COCO-SSD modell segítségével valósítja meg a pontos objektumfelismerést. A modell a következőket képes felismerni:</p>
             <ul>
-                <li>Valós képfelismerő algoritmus (pl. TensorFlow.js, OpenCV)</li>
-                <li>AR (kiterjesztett valóság) technológia (pl. ARCore, ARKit)</li>
-                <li>Háttérrendszer a képek összehasonlításához</li>
+                <li>80 különböző objektumtípus</li>
+                <li>Valós idejű felismerés (max. 5-10 FPS mobil eszközön)</li>
+                <li>Pontos helymeghatározás keretezéssel</li>
             </ul>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const videoElement = document.getElementById('video-element');
             const canvasElement = document.getElementById('canvas-element');
-            const overlayImage = document.getElementById('overlay');
             const statusDiv = document.getElementById('status');
             const startBtn = document.getElementById('start-btn');
             const switchCameraBtn = document.getElementById('switch-camera-btn');
-            const simulateBtn = document.getElementById('simulate-btn');
+            const toggleDetectionBtn = document.getElementById('toggle-detection-btn');
             const resetBtn = document.getElementById('reset-btn');
             const captureBtn = document.getElementById('capture-btn');
-            const targetImg = document.getElementById('target-img');
+            const loadingDiv = document.getElementById('loading');
+            const progressBar = document.getElementById('progress');
             
             let stream = null;
-            let useFrontCamera = true;
-            let recognitionInterval = null;
-            let isRecognizing = false;
+            let useFrontCamera = false; // Default to back camera for object detection
+            let model = null;
+            let detectionInterval = null;
+            let isDetecting = false;
+            let detectedObjects = [];
+            
+            // Betöltési folyamat szimulálása
+            async function simulateLoading() {
+                for (let i = 0; i <= 100; i++) {
+                    progressBar.style.width = i + '%';
+                    await new Promise(resolve => setTimeout(resolve, 30));
+                }
+                loadingDiv.style.display = 'none';
+            }
+            
+            // TensorFlow.js modell betöltése
+            async function loadModel() {
+                try {
+                    statusDiv.textContent = "Modell betöltése...";
+                    statusDiv.className = "status searching";
+                    
+                    // COCO-SSD modell betöltése
+                    model = await cocoSsd.load();
+                    
+                    statusDiv.textContent = "Modell betöltve. Kamera indítása...";
+                    await startCamera();
+                    
+                } catch (error) {
+                    console.error("Hiba a modell betöltésekor:", error);
+                    statusDiv.textContent = "Hiba: " + error.message;
+                    statusDiv.className = "status error";
+                }
+            }
             
             // Kamera indítása
             async function startCamera() {
@@ -276,8 +384,8 @@
                     const constraints = {
                         video: {
                             facingMode: useFrontCamera ? "user" : "environment",
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
                         }
                     };
                     
@@ -288,13 +396,13 @@
                     if (useFrontCamera) {
                         videoElement.style.transform = "scaleX(-1)"; // Elülső kamera - tükrözés
                     } else {
-                        videoElement.style.transform = "scaleX(1)"; // Hátső kamera - nincs tükrözés
+                        videoElement.style.transform = "scaleX(1)"; // Hátsó kamera - nincs tükrözés
                     }
                     
-                    statusDiv.textContent = "Kamera elérve. Keresés a célkép után...";
+                    statusDiv.textContent = "Kamera elérve. Objektumok felismerése...";
                     
-                    // Szimulált képfelismerés indítása
-                    startRecognitionSimulation();
+                    // Objektumfelismerés indítása
+                    startObjectDetection();
                     
                 } catch (error) {
                     console.error("Hiba a kamera indításakor:", error);
@@ -303,10 +411,136 @@
                 }
             }
             
+            // Objektumfelismerés indítása
+            function startObjectDetection() {
+                if (detectionInterval) {
+                    clearInterval(detectionInterval);
+                }
+                
+                isDetecting = true;
+                toggleDetectionBtn.textContent = "Objektumfelismerés ki";
+                
+                // Objektumok felismerése rendszeres időközönként
+                detectionInterval = setInterval(async () => {
+                    if (model && isDetecting) {
+                        detectObjects();
+                    }
+                }, 500); // 2 FPS (mobil eszközökön a teljesítmény miatt)
+            }
+            
+            // Objektumok felismerése
+            async function detectObjects() {
+                if (!model || !isDetecting) return;
+                
+                try {
+                    // Objektumok felismerése a videóban
+                    const predictions = await model.detect(videoElement);
+                    
+                    // Előző detektálási eredmények törlése
+                    clearDetections();
+                    
+                    if (predictions.length > 0) {
+                        detectedObjects = predictions;
+                        displayDetections(predictions);
+                        
+                        statusDiv.textContent = `${predictions.length} objektum felismerve`;
+                        statusDiv.className = "status detected";
+                    } else {
+                        statusDiv.textContent = "Keresés objektumok után...";
+                        statusDiv.className = "status searching";
+                    }
+                } catch (error) {
+                    console.error("Hiba az objektumfelismerés során:", error);
+                }
+            }
+            
+            // Detektált objektumok megjelenítése
+            function displayDetections(predictions) {
+                const videoWidth = videoElement.videoWidth;
+                const videoHeight = videoElement.videoHeight;
+                const container = document.querySelector('.camera-container');
+                
+                predictions.forEach(prediction => {
+                    const [x, y, width, height] = prediction.bbox;
+                    
+                    // Skálázás a videó méretéhez
+                    const scaleX = videoElement.offsetWidth / videoWidth;
+                    const scaleY = videoElement.offsetHeight / videoHeight;
+                    
+                    // Detektálási doboz
+                    const box = document.createElement('div');
+                    box.className = 'detection-box';
+                    box.style.left = `${x * scaleX}px`;
+                    box.style.top = `${y * scaleY}px`;
+                    box.style.width = `${width * scaleX}px`;
+                    box.style.height = `${height * scaleY}px`;
+                    
+                    // Címke
+                    const label = document.createElement('div');
+                    label.className = 'detection-label';
+                    label.textContent = `${prediction.class} (${Math.round(prediction.score * 100)}%)`;
+                    label.style.left = `${x * scaleX}px`;
+                    label.style.top = `${(y * scaleY) - 25}px`;
+                    
+                    container.appendChild(box);
+                    container.appendChild(label);
+                    
+                    // AR overlay hozzáadása a fontosabb objektumokhoz
+                    if (prediction.score > 0.7 && ['cell phone', 'book', 'cup', 'keyboard', 'mouse'].includes(prediction.class)) {
+                        addAROverlay(x * scaleX, y * scaleY, width * scaleX, height * scaleY, prediction.class);
+                    }
+                });
+            }
+            
+            // AR overlay hozzáadása
+            function addAROverlay(x, y, width, height, className) {
+                const overlay = document.createElement('img');
+                overlay.className = 'overlay-image';
+                overlay.style.display = 'block';
+                overlay.style.left = `${x + width/2}px`;
+                overlay.style.top = `${y}px`;
+                overlay.style.transform = 'translate(-50%, -100%)';
+                
+                // Különböző overlay-ek különböző objektumokhoz
+                if (className === 'cell phone') {
+                    overlay.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzRlNGE4YSIgcng9IjEwIiByeT0iMTAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSI+VEVMRUZPTjwvdGV4dD48L3N2Zz4=';
+                } else if (className === 'book') {
+                    overlay.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzYlOEUmQiIgcng9IjEwIiByeT0iMTAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSI+S8OWTkWVPC90ZXh0Pjwvc3ZnPg==';
+                } else {
+                    overlay.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2E3NzdlMyIgcng9IjEwIiByeT0iMTAiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSI+QVIgS0VQPC90ZXh0Pjwvc3ZnPg==';
+                }
+                
+                document.querySelector('.camera-container').appendChild(overlay);
+            }
+            
+            // Detektálások törlése
+            function clearDetections() {
+                const boxes = document.querySelectorAll('.detection-box, .detection-label, .overlay-image');
+                boxes.forEach(box => box.remove());
+            }
+            
             // Kamera váltása
             switchCameraBtn.addEventListener('click', function() {
                 useFrontCamera = !useFrontCamera;
                 startCamera();
+            });
+            
+            // Objektumfelismerés ki/be kapcsolása
+            toggleDetectionBtn.addEventListener('click', function() {
+                isDetecting = !isDetecting;
+                
+                if (isDetecting) {
+                    toggleDetectionBtn.textContent = "Objektumfelismerés ki";
+                    startObjectDetection();
+                    statusDiv.textContent = "Objektumok felismerése...";
+                    statusDiv.className = "status searching";
+                } else {
+                    toggleDetectionBtn.textContent = "Objektumfelismerés be";
+                    clearInterval(detectionInterval);
+                    clearDetections();
+                    statusDiv.textContent = "Objektumfelismerés kikapcsolva";
+                    statusDiv.className = "status";
+                }
             });
             
             // Kamera indítása gomb
@@ -328,10 +562,22 @@
                     context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
                 }
                 
+                // Detektálási dobozok hozzáadása
+                detectedObjects.forEach(prediction => {
+                    const [x, y, width, height] = prediction.bbox;
+                    context.strokeStyle = '#4caf50';
+                    context.lineWidth = 3;
+                    context.strokeRect(x, y, width, height);
+                    
+                    context.fillStyle = 'rgba(76, 175, 80, 0.8)';
+                    context.font = '16px Arial';
+                    context.fillText(`${prediction.class} (${Math.round(prediction.score * 100)}%)`, x, y > 20 ? y - 5 : 15);
+                });
+                
                 // Kép letöltése
                 const dataUrl = canvasElement.toDataURL('image/png');
                 const link = document.createElement('a');
-                link.download = 'arfelvetel.png';
+                link.download = 'object_detection.png';
                 link.href = dataUrl;
                 link.click();
                 
@@ -339,68 +585,22 @@
                 statusDiv.className = "status detected";
                 
                 setTimeout(() => {
-                    statusDiv.textContent = "Keresés a célkép után...";
+                    statusDiv.textContent = "Objektumok felismerése...";
                     statusDiv.className = "status searching";
                 }, 3000);
             });
             
-            // Szimulált felismerés gomb
-            simulateBtn.addEventListener('click', function() {
-                simulateRecognition();
-            });
-            
             // Visszaállítás gomb
             resetBtn.addEventListener('click', function() {
-                overlayImage.style.display = 'none';
-                statusDiv.textContent = "Keresés a célkép után...";
+                clearDetections();
+                statusDiv.textContent = "Objektumok felismerése...";
                 statusDiv.className = "status searching";
-                startRecognitionSimulation();
+                startObjectDetection();
             });
             
-            // Szimulált képfelismerés indítása
-            function startRecognitionSimulation() {
-                if (recognitionInterval) {
-                    clearInterval(recognitionInterval);
-                }
-                
-                recognitionInterval = setInterval(() => {
-                    if (Math.random() < 0.15 && !isRecognizing) { // 15% esély a felismerésre
-                        simulateRecognition();
-                    }
-                }, 2000);
-            }
-            
-            // Felismerés szimulálása
-            function simulateRecognition() {
-                isRecognizing = true;
-                overlayImage.style.display = 'block';
-                statusDiv.textContent = "Kép felismerve! AR tartalom megjelenítve.";
-                statusDiv.className = "status detected";
-                
-                // Animáció a felismeréshez
-                overlayImage.style.animation = 'none';
-                overlayImage.offsetHeight; // Trigger reflow
-                overlayImage.style.animation = 'pulse 2s infinite';
-                
-                // 5 másodperc után automatikus visszaállítás
-                setTimeout(() => {
-                    if (isRecognizing) {
-                        statusDiv.textContent = "Keresés a célkép után...";
-                        statusDiv.className = "status searching";
-                        overlayImage.style.display = 'none';
-                        isRecognizing = false;
-                        startRecognitionSimulation();
-                    }
-                }, 7000);
-            }
-            
-            // Alapértelmezett kamera indítása
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                startCamera();
-            } else {
-                statusDiv.textContent = "A böngésző nem támogatja a kamerahasználatot.";
-                statusDiv.className = "status error";
-            }
+            // Oldal betöltése
+            simulateLoading();
+            await loadModel();
         });
     </script>
 </body>
